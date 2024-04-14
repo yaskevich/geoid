@@ -115,5 +115,16 @@ app.get('/api/users', auth, async (req, res) => {
   res.json(users);
 });
 
+app.get('/api/places', auth, async (req, res) => {
+  const places = await db.getPlaceFromTop(req.user, req.query?.id);
+  res.json(places);
+});
+
+app.get('/api/search', auth, async (req, res) => {
+  const places = await db.searchPlaceFromTop(req.user, req.query?.id, req.query.lang);
+  res.json(places);
+});
+
+
 app.listen(port);
 console.log(`Backend is at port ${port}`);

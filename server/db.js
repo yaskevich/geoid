@@ -266,5 +266,21 @@ export default {
 
   async release() {
     return pool.end();
-  }
+  },
+
+  async getPlaceFromTop(user, id) {
+    const sql = `SELECT * from beltop${id ? ' WHERE id = $1' : ''}`;
+    const values = [];
+    if (id) {
+      values.push(id);
+    }
+    const result = await pool.query(`${sql} LIMIT 10`, values);
+    return result?.rows;
+  },
+  async searchPlaceFromTop(user, str, lang = 'be') {
+    const sql = `SELECT * from beltop WHERE name_${lang} LIKE '%' || $1 || '%'`;
+    const result = await pool.query(sql, [str]);
+    return result?.rows;
+  },
+
 };
