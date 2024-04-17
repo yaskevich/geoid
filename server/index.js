@@ -115,16 +115,17 @@ app.get('/api/users', auth, async (req, res) => {
   res.json(users);
 });
 
-app.get('/api/places', auth, async (req, res) => {
-  const places = await db.getPlaceFromTop(req.user, req.query?.id);
+const tables = ['beltop', 't0'];
+
+app.get('/api/places/:id', auth, async (req, res) => {
+  const places = await db.getPlaceFromTable(tables[Number(req.params.id) || 0], req.user, req.query?.id, req.query.offset, req.query.limit);
   res.json(places);
 });
 
 app.get('/api/search', auth, async (req, res) => {
-  const places = await db.searchPlaceFromTop(req.user, req.query?.id, req.query.lang);
+  const places = await db.searchPlaceFromTable(tables[Number(req.params.id) || 0], req.user, req.query?.id, req.query.lang);
   res.json(places);
 });
-
 
 app.listen(port);
 console.log(`Backend is at port ${port}`);

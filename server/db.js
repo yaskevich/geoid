@@ -268,17 +268,22 @@ export default {
     return pool.end();
   },
 
-  async getPlaceFromTop(user, id) {
-    const sql = `SELECT * from beltop${id ? ' WHERE id = $1' : ''}`;
+  async getPlaceFromTable(table, user, id, offset, limit) {
+    let lim = Number(limit) || 0;
+    const off = Number(offset);
+    // eslint-disable-next-line no-nested-ternary
+    lim = lim ? (lim > 500 ? 500 : lim) : 100;
+    const sql = `SELECT * from ${table} ${id ? 'WHERE id = $1' : 'ORDER BY id'}`;
     const values = [];
     if (id) {
       values.push(id);
     }
-    const result = await pool.query(`${sql} LIMIT 10`, values);
+    const result = await pool.query(`${sql} OFFSET ${off} LIMIT ${lim}`, values);
     return result?.rows;
   },
-  async searchPlaceFromTop(user, str, lang = 'be') {
-    const sql = `SELECT * from beltop WHERE name_${lang} LIKE '%' || $1 || '%'`;
+
+  async searchPlaceFromTable(table, user, str, lang = 'be', offset = 0, limit = 100) {
+    const sql = `SELECT * from ${table} WHERE name_${lang} LIKE '%' || $1 || '%' OFFSET ${offset} LIMIT ${limit}`;
     const result = await pool.query(sql, [str]);
     return result?.rows;
   },
