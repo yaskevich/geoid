@@ -115,16 +115,10 @@ app.get('/api/users', auth, async (req, res) => {
   res.json(users);
 });
 
-const tables = ['beltop', 't0'];
-
 app.get('/api/places/:id', auth, async (req, res) => {
-  const places = await db.getPlaceFromTable(tables[Number(req.params.id) || 0], req.user, req.query?.id, req.query.offset, req.query.limit);
-  res.json(places);
-});
-
-app.get('/api/search', auth, async (req, res) => {
-  const places = await db.searchPlaceFromTable(tables[Number(req.params.id) || 0], req.user, req.query?.id, req.query.lang);
-  res.json(places);
+  const places = await db.getFromPlaces(req.user, req.params.id, req.query);
+  const stats = await db.getStats();
+  res.json({ places, stats });
 });
 
 app.listen(port);

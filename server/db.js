@@ -56,8 +56,10 @@ const databaseScheme = {
 };
 
 let tablesResult;
+let dataTables = [];
 try {
   tablesResult = await pool.query(databaseQuery);
+  dataTables = tablesResult.rows.map((x) => x.table_name).filter((x) => x.includes('bel'));
 } catch (error) {
   console.error(error);
   pool.end();
@@ -105,6 +107,7 @@ if (tables.length !== Object.keys(databaseScheme).length) {
 }
 
 export default {
+  tables: dataTables,
   async changeActivationStatus(user, userId, status) {
     console.log('activation request:', userId, 'by', user.id);
     let data = {};
@@ -268,24 +271,38 @@ export default {
     return pool.end();
   },
 
-  async getPlaceFromTable(table, user, id, offset, limit) {
-    let lim = Number(limit) || 0;
-    const off = Number(offset);
-    // eslint-disable-next-line no-nested-ternary
-    lim = lim ? (lim > 500 ? 500 : lim) : 100;
-    const sql = `SELECT * from ${table} ${id ? 'WHERE id = $1' : 'ORDER BY id'}`;
+  async getFromPlaces(user, tableNumber, params) {
+    const {
+      id, offset, limit, language, mask
+    } = params;
+    const tableName = dataTables[Number(tableNumber) || 0];
     const values = [];
+    let sql = `SELECT * FROM ${tableName} `;
     if (id) {
+      sql += ' WHERE id = $1';
       values.push(id);
+    } else {
+      let lim = Number(limit) || 0;
+      const off = Number(offset) || 0;
+      // eslint-disable-next-line no-nested-ternary
+      lim = lim ? (lim > 500 ? 500 : lim) : 100;
+
+      if (mask) {
+        const langs = ['be', 'ru'];
+        const lang = langs.includes(language) ? language : langs[0];
+        sql += ` WHERE name_${lang} LIKE '%' || $1 || '%'`;
+        values.push(mask);
+      }
+
+      sql += ` ORDER BY id OFFSET ${off} LIMIT ${lim}`;
     }
-    const result = await pool.query(`${sql} OFFSET ${off} LIMIT ${lim}`, values);
+    const result = await pool.query(sql, values);
     return result?.rows;
   },
 
-  async searchPlaceFromTable(table, user, str, lang = 'be', offset = 0, limit = 100) {
-    const sql = `SELECT * from ${table} WHERE name_${lang} LIKE '%' || $1 || '%' OFFSET ${offset} LIMIT ${limit}`;
-    const result = await pool.query(sql, [str]);
-    return result?.rows;
+  async getStats() {
+    const result = await pool.query(dataTables.map((x, i) => `SELECT COUNT(*)::int as "${i}" FROM ${x}`).join(';'));
+    return Object.values(Object.assign({}, ...(result.map((x) => x.rows.shift()))));
   },
 
 };
