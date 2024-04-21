@@ -1,9 +1,14 @@
 <template>
     <div class="home">
         <div v-if="isLoaded" style="text-align: center; max-width: 900px; margin: auto">
-            <n-card :bordered="false" :summary="summary">
-                <n-data-table :remote="true" :columns="columns" :data="datum.places" :pagination="pagination"
-                    :summary="summary" :bordered="false" :row-key="(rowData: IGenPlace) => rowData.id" />
+            <n-card :bordered="false">
+                <n-space vertical>
+                    <n-popselect v-model:value="tableId" :options="tableSwitchOptions" :on-update:value="switchTable">
+                        <n-button>{{ tableSwitchOptions.find(x => x.value === tableId)?.label }}</n-button>
+                    </n-popselect>
+                    <n-data-table :remote="true" :columns="columns" :data="datum.places" :pagination="pagination"
+                        :summary="summary" :bordered="false" :row-key="(rowData: IGenPlace) => rowData.id" />
+                </n-space>
             </n-card>
         </div>
         <div v-else style="text-align: center">...loading</div>
@@ -11,15 +16,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeMount, h } from 'vue';
-import axios from 'axios';
+import { ref, reactive, onBeforeMount, h, PropType } from 'vue';
 import store from '../store';
-import { NTag, NSpace, NIcon } from 'naive-ui';
 import { NButton, useMessage, DataTableColumns } from 'naive-ui';
 import type { DataTableCreateSummary } from 'naive-ui';
-
 import Preview from './Preview.vue';
 
+const message = useMessage();
+const isLoaded = ref(false);
+const datum = reactive({ stats: [] as Array<keyable>, places: [] as Array<IGenPlace> });
+const pageSizes = [50, 100, 250];
+const tableId = ref(0);
+
+const tableSwitchOptions = [
+    {
+        label: 'Basic (Lem.)',
+        value: 0
+    },
+    {
+        label: 'Table 1',
+        value: 1
+    },
+    {
+        label: 'Table 2',
+        value: 2
+    },
+    {
+        label: 'Table 3',
+        value: 3
+    },
+    {
+        label: 'Table 4',
+        value: 4
+    },
+];
+
+const getData = async () => {
+    const data = await store.get('places/' + tableId.value, null, { offset: (pagination.page - 1) * pagination.pageSize, limit: pagination.pageSize });
+    // const data = await store.get('search', 'пар');
+    // console.log(data);
+    Object.assign(datum, data);
+    // console.log(data.stats);
+    pagination.itemCount = data.stats[tableId.value];
+};
+
+const switchTable = async (val: any) => {
+    // console.log('switch', val);
+    tableId.value = val;
+    pagination.page = 1;
+    await getData();
+};
 
 const summary: DataTableCreateSummary = () => {
     return {
@@ -27,24 +73,10 @@ const summary: DataTableCreateSummary = () => {
             value: h(
                 'span',
                 { style: { color: 'gray', fontWeight: 'bold' } },
-                datum.stats[tableId]
+                datum.stats[tableId.value]
             ),
         }
     }
-};
-
-const tableId = 1;
-const message = useMessage();
-const isLoaded = ref(false);
-const datum = reactive({ stats: [] as Array<keyable>, places: [] as Array<IGenPlace> });
-const pageSizes = [50, 100, 250];
-
-const getData = async () => {
-    const data = await store.get('places/' + tableId, null, { offset: (pagination.page - 1) * pagination.pageSize, limit: pagination.pageSize });
-    // const data = await store.get('search', 'пар');
-    // console.log(data);
-    Object.assign(datum, data);
-    pagination.itemCount = data.stats[tableId];
 };
 
 const pagination = reactive({
@@ -68,24 +100,14 @@ const pagination = reactive({
 
 
 const createColumns = ({
-    play
+    handleCell
 }: {
-    play: (row: IGenPlace) => void
+    handleCell: (row: IGenPlace) => void
 }): DataTableColumns<IGenPlace> => {
     return [
         {
             type: 'expand',
-            renderExpand: (rowData) => {
-                return h(
-                    NSpace, null, {
-                    default: () => [
-                        Object.entries(rowData).filter(x => x?.[1] && !['id', 'place_be', 'place_ru', 'lon', 'lat'].includes(x[0])).map(x => h(
-                            NTag,
-                            { style: { color: 'gray', fontWeight: 'bold' } },
-                            `${x[0]} ${x[1]}`
-                        ))]
-                });
-            },
+            renderExpand: (rowData) => h(Preview, { data: rowData }),
         },
         {
             title: '#',
@@ -105,11 +127,17 @@ const createColumns = ({
         },
         {
             title: 'BE',
-            key: 'place_be'
+            key: 'belarusian',
+            render(row) {
+                return row.place_be || row.name_be || row.cur_name_be
+            }
         },
         {
             title: 'RU',
-            key: 'place_ru'
+            key: 'russian',
+            render(row) {
+                return row.place_ru || row.name_ru
+            }
         },
         {
             title: 'Action',
@@ -121,7 +149,7 @@ const createColumns = ({
                         strong: true,
                         tertiary: true,
                         size: 'small',
-                        onClick: () => play(row)
+                        onClick: () => handleCell(row)
                     },
                     { default: () => 'View' }
                 )
@@ -131,8 +159,8 @@ const createColumns = ({
 };
 
 const columns = createColumns({
-    play(row: IGenPlace) {
-        message.info(`Play ${row.id}`)
+    handleCell(row: IGenPlace) {
+        message.info(`Row #${row.id}. Action: not implemented`)
     }
 });
 
