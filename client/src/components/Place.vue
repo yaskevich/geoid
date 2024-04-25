@@ -1,11 +1,9 @@
 <template>
     <div v-if="isLoaded" style="text-align: center; max-width: 900px; margin: auto">
         <n-card :bordered="false">
-
             Place {{ id }}
-
             {{ datum }}
-
+            <Mapper :datum="datum.coordinates ? datum.coordinates.split(',').reverse() : [datum.lon, datum.lat]" />
         </n-card>
     </div>
 </template>
@@ -21,7 +19,7 @@ const formRef = ref<FormInst | null>(null);
 const vuerouter = useRoute();
 const id = ref(String(vuerouter.params.id));
 const isLoaded = ref(false);
-const datum = reactive({});
+const datum = reactive({} as IGenPlace);
 
 onBeforeMount(async () => {
     if (id.value) {
