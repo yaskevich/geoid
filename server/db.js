@@ -1,16 +1,16 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
-// import fs from 'fs';
-// import path from 'path';
-// import { fileURLToPath } from 'url';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 // import { Worker } from 'worker_threads';
 import bcrypt from 'bcrypt';
 import passGen from 'generate-password';
 import dotenv from 'dotenv';
 import pg from 'pg';
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -304,5 +304,29 @@ export default {
     const result = await pool.query(dataTables.map((x, i) => `SELECT COUNT(*)::int as "${i}" FROM ${x}`).join(';'));
     return Object.values(Object.assign({}, ...(result.map((x) => x.rows.shift()))));
   },
+
+  async getOSMdata (osmId) {
+    let datum;
+    const pathToOSM = path.join(__dirname, 'cache', `${osmId}.json`);
+    if (fs.existsSync(pathToOSM)) {
+        datum = JSON.parse(fs.readFileSync(pathToOSM, { encoding: 'utf8', flag: 'r' }));
+    } else {
+        console.log('>>>>>>>>>> query', osmId);
+        const response1 = await fetch(`https://nominatim.openstreetmap.org/lookup?osm_ids=N${osmId}&format=json&extratags=1&namedetails=1`);
+        const datumNom = (await response1.json())?.shift();
+
+        const response2 = await fetch(`https://www.openstreetmap.org/api/0.6/node/${osmId}.json`);
+        const osmJSON = await response2.json();
+        if (!osmJSON?.elements) {
+            console.error('Wrong response from OSM API!');
+            process.exit();
+        }
+        const datumOSM = osmJSON?.elements.shift();
+
+        datum = { nominatim: datumNom, raw: datumOSM };
+        fs.writeFileSync(pathToOSM, JSON.stringify(datum, null, 4));
+    }
+    return datum;
+  }
 
 };

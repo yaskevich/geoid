@@ -116,9 +116,17 @@ app.get('/api/users', auth, async (req, res) => {
 });
 
 app.get('/api/places/:id', auth, async (req, res) => {
-  const places = await db.getFromPlaces(req.user, req.params.id, req.query);
-  const stats = await db.getStats();
-  res.json({ places, stats });
+  const data = {};
+  data["places"] = await db.getFromPlaces(req.user, req.params.id, req.query);
+  if (req.query.id) {
+    const osmId = data['places']?.[0]?.['osm_node_id'];
+    if (osmId) {
+      data["osm"] = await db.getOSMdata(osmId);
+    }
+  } else {
+    data["stats"] = await db.getStats()
+  }
+  res.json(data);
 });
 
 app.listen(port);
