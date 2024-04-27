@@ -1,8 +1,9 @@
 <template>
-    <div v-if="isLoaded" style="text-align: center; max-width: 900px; margin: auto">
+    <div v-if="isLoaded" style=" max-width: 900px; margin: auto">
         <n-card :bordered="false">
             Place {{ id }}
-            {{ datum }}
+            <!-- {{ datum }} -->
+            <JsonViewer :value="{...datum}" />
             <Mapper :datum="datum.coordinates ? datum.coordinates.split(',').reverse() : [datum.lon, datum.lat]" />
         </n-card>
     </div>
