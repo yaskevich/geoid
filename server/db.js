@@ -273,8 +273,9 @@ export default {
 
   async getFromPlaces(user, tableNumber, params) {
     const {
-      id, offset, limit, language, mask
+      id, offset, limit, language, mask, col
     } = params;
+    let count;
     const tableName = dataTables[Number(tableNumber) || 0];
     const values = [];
     let sql = `SELECT * FROM ${tableName} `;
@@ -288,16 +289,21 @@ export default {
       lim = lim ? (lim > 500 ? 500 : lim) : 100;
 
       if (mask) {
-        const langs = ['be', 'ru'];
-        const lang = langs.includes(language) ? language : langs[0];
-        sql += ` WHERE name_${lang} LIKE '%' || $1 || '%'`;
-        values.push(mask);
+        console.log(mask, col);
+        // const langs = ['be', 'ru'];
+        // const lang = langs.includes(language) ? language : langs[0];
+        // sql += ` WHERE name_${lang} LIKE '%' || $1 || '%'`;
+        sql += ` WHERE LOWER(${col}) LIKE '%' || $1 || '%'`;
+        const counter = sql.replace('*', 'COUNT(*)::int');
+        values.push(mask.toLowerCase());
+        const countResult = await pool.query(counter, values);
+        count = countResult.rows?.shift()?.count;
       }
 
       sql += ` ORDER BY id OFFSET ${off} LIMIT ${lim}`;
     }
     const result = await pool.query(sql, values);
-    return result?.rows;
+    return { places: result?.rows, count };
   },
 
   async getStats() {
