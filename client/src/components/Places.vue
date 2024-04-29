@@ -6,6 +6,20 @@
                     <n-popselect v-model:value="tableId" :options="tableSwitchOptions" :on-update:value="switchTable">
                         <n-button>{{ tableSwitchOptions.find(x => x.value === tableId)?.label }}</n-button>
                     </n-popselect>
+                    <n-space justify="center">
+                        <n-input-group>
+                            <n-select v-model:value="searchField" :options="searchOptions" style="width:200px" />
+                            <n-input v-model:value="mask" type="text" placeholder="Input string"
+                                :disabled="!searchField" @keyup.enter="search" />
+                            <n-button @click="search" :disabled="!mask">
+                                <template #icon>
+                                    <n-icon>
+                                        <ManageSearchOutlined />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </n-input-group>
+                    </n-space>
                     <n-data-table :remote="true" :columns="columns" :data="datum.places" :pagination="pagination"
                         :summary="summary" :bordered="false" :row-key="(rowData: IGenPlace) => rowData.id" />
                 </n-space>
@@ -21,12 +35,24 @@ import store from '../store';
 import { NButton, useMessage, DataTableColumns } from 'naive-ui';
 import type { DataTableCreateSummary } from 'naive-ui';
 import Preview from './Preview.vue';
+import router from '../router';
+import {
+    ManageSearchOutlined,
+} from '@vicons/material';
 
 const message = useMessage();
 const isLoaded = ref(false);
 const datum = reactive({ stats: [] as Array<keyable>, places: [] as Array<IGenPlace> });
 const pageSizes = [50, 100, 250];
 const tableId = ref(0);
+const mask = ref<string>('');
+const searchField = ref(null);
+const searchOptions = ref([] as Array<{ label: string; value: string; }>);
+
+const search = async () => {
+    console.log('query', mask.value);
+    await getData();
+};
 
 const tableSwitchOptions = [
     {
@@ -52,18 +78,25 @@ const tableSwitchOptions = [
 ];
 
 const getData = async () => {
-    const data = await store.get('places/' + tableId.value, null, { offset: (pagination.page - 1) * pagination.pageSize, limit: pagination.pageSize });
-    // const data = await store.get('search', 'пар');
+    const data = await store.get('places/' + tableId.value, null, { offset: (pagination.page - 1) * pagination.pageSize, limit: pagination.pageSize, mask: mask.value, col: searchField.value });
     // console.log(data);
     Object.assign(datum, data);
-    // console.log(data.stats);
-    pagination.itemCount = data.stats[tableId.value];
+
+    if (data?.places?.[0]) {
+        const fields = Object.keys(data?.places?.[0])?.filter((x: string) => x.includes('_be') || x.includes('_ru'));
+        // console.log(fields);
+        searchOptions.value = fields.map(x => ({ label: x, value: x }))
+    }
+
+    pagination.itemCount = data.count ? data.count : data.stats[tableId.value];
 };
 
 const switchTable = async (val: any) => {
     // console.log('switch', val);
     tableId.value = val;
     pagination.page = 1;
+    searchField.value = null;
+    mask.value = '';
     await getData();
 };
 
@@ -73,7 +106,7 @@ const summary: DataTableCreateSummary = () => {
             value: h(
                 'span',
                 { style: { color: 'gray', fontWeight: 'bold' } },
-                datum.stats[tableId.value]
+                pagination.itemCount
             ),
         }
     }
@@ -160,7 +193,8 @@ const createColumns = ({
 
 const columns = createColumns({
     handleCell(row: IGenPlace) {
-        message.info(`Row #${row.id}. Action: not implemented`)
+        // message.info(`Row #${row.id}. Action: not implemented`)
+        router.push(`/place/${tableId.value}-${row.id}`);
     }
 });
 
