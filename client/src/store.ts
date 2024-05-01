@@ -28,11 +28,6 @@ const state = reactive<IState>({
     key: '',
   },
   error: '',
-  selection: {
-    images: {},
-    objects: {},
-    mode: false,
-  },
 });
 
 const renderIcon = (icon: Component) => {
@@ -47,10 +42,10 @@ const makeItem = (name: string, title: string, icon: Component) => ({
 });
 
 const makeMenu = () => [
-  makeItem('Home', 'Главная', HomeOutlined),
-  makeItem('Texts', 'Тексты', InputOutlined),
-  makeItem('Persons', 'Люди', AccountTreeOutlined),
-  makeItem('Users', 'Пользователи', PersonSearchOutlined),
+  makeItem('Home', 'Home', HomeOutlined),
+  // makeItem('Texts', 'Тексты', InputOutlined),
+  makeItem('Places', 'Places', AccountTreeOutlined),
+  makeItem('Users', 'Users', PersonSearchOutlined),
   
   // makeItem('Flow', 'Objects', SelectAllOutlined),
   // {
